@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="Стандарт WX" width="300">
+  <img src="assets/SNLogo.png" alt="Стандарт WX" width="300">
 </p>
 
 # 📘 Стандарт WX
