@@ -2,253 +2,238 @@
 // Created by ASUS on 24.03.2026.
 //
 
+// При использовании с русским текстом рекомендуется установить локаль:
+// setlocale(LC_ALL, "Russian");
+
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
 #include <iostream>
 #include <string>
+#include <optional>
 
 
 using std::string;
 using std::round;
+using std::optional;
+using std::nullopt;
 
 
-#define KEL 273.15
-#define KOF_MM 0.75006
+constexpr double KELVIN_OFFSET = 273.15;
+constexpr double PASCAL_TO_MMHG = 0.75006;
 
 
-typedef enum { max_to4nost = 3, min_to4nost = 1, to4nost = 2 } TO4NOST;
+typedef enum { HUNDREDTHS = 3, INTEGER = 1, TENTHS = 2 } Precision;
 
 
-// перевод температуры из Кульвинов в Цельсия
-double ubersetzen_kel_4el(double a)
-{
-    return a - KEL;
-}
+namespace WeatherUtils {
+    // перевод температуры из Кельвина в Цельсия
+    double kelvin_To_Celsius(double kelvin)
+    {
+        return kelvin - KELVIN_OFFSET;
+    }
 
-// перевод паскалей в мм рт ст
-double ubersetzen_pas_mm(double a)
-{
-    return a * KOF_MM;
-}
+    // перевод давления из Паскаль в мм рт ст
+    double pascal_To_MmHg(double pascal)
+    {
+        return pascal * PASCAL_TO_MMHG;
+    }
 
 
-// форматированный вывод
-double format_value(double value, TO4NOST to4)
-{
-    if (to4 == max_to4nost)
-        return std::round(value * 100.0) / 100.0;
-    if (to4 == to4nost)
-        return std::round(value * 10.0) / 10.0;
-    if (to4 == min_to4nost)
+    // форматированный вывод
+    double formatValue(double value, Precision precision)
+    {
+        if (precision == HUNDREDTHS)
+            return std::round(value * 100.0) / 100.0;
+        if (precision == TENTHS)
+            return std::round(value * 10.0) / 10.0;
+        if (precision == INTEGER)
+            return std::round(value);
         return std::round(value);
-    return std::round(value);
+    }
+
+    // форматированное вывод времени
+    string formatTimestamp(long long timestamp, int timezoneOffset)
+    {
+        time_t loc_time = (time_t)(timestamp + timezoneOffset);
+        struct tm* time_info = std::gmtime(&loc_time);
+
+        char buffer[20];
+        std::strftime(buffer, sizeof(buffer), "%d.%m.%Y %H:%M", time_info);
+
+        return string(buffer);
+    }
 }
 
-// форматированное время
-string format_time(long long time_n, int our_pois)
-{
-    time_t loc_time = (time_t)(time_n + our_pois);
-    struct tm* time_info = std::gmtime(&loc_time);
-
-    char buffer[20];
-    std::strftime(buffer, sizeof(buffer), "%d.%m.%Y %H:%M", time_info);
-
-    return string(buffer);
-}
 
 
-
-
-// класс погоды
+// класс погоды_сейчас
 class Weather_Now
 {
 private:
-    string city_name;   // название города
+    string cityName;                              // название города
 
-    double temp_kel;    // температура в кельвинах
-    double temp_4el;    // температура в градусах цельсия
-    int vlaga;   // влажность
-    double dav_pas;     // давление в паскалях
-    double dav; // давление в мм
+    optional<double> temperatureKelvin;           // температура в кельвинах
+    optional<double> temperatureCelsius;          // температура в градусах цельсия
+    optional<int> humidity;                       // влажность
+    optional<double> pressurePascal;              // давление в паскалях
+    optional<double> pressureMmHg;                // давление в мм
 
-    double speed_wind;  // скорость ветра
-    int wind_deg; // направление ветра
-    double gust; // порывы ветра
+    optional<double> windSpeed;                   // скорость ветра
+    optional<int> windDegrees;                    // направление ветра
+    optional<double> windGust;                    // порывы ветра
 
-    int time_zona;  // часовой пояс
-    long long time_3amer;   // время замера
-    long long time_3akat, time_pacvet;  //время заката и рассвета
+    optional<int> timezoneOffset;                 // часовой пояс
+    optional<long long> measurementTime;          // время замера
+    optional<long long> sunsetTime, sunriseTime;  //время заката и рассвета
 
-    string opic;    // описание
+    string description;                           // описание
 
 
 
 
 public:
-    Weather_Now(string name, double t_k) { // упрощенное объявление
-        city_name = name;
-        temp_kel = t_k;
-        temp_4el = ubersetzen_kel_4el(t_k);
-
-        vlaga = -1;
-        dav_pas = -1;
-        dav = -1;
-
-        speed_wind = -1;
-        wind_deg = -1;
-        gust = -1;
-
-        time_zona = -1;
-        time_3amer = -1;
-        time_3akat = -1;
-        time_pacvet = -1;
-
-        opic = "Нет данных.";
+    // конструктор по умолчанию
+    Weather_Now(const string& name) : cityName(name) {
+        description = "Нет данных.";
     }
 
-    // полноценное объявление
-    Weather_Now(string name, double t_k = -1.0, int vlag = -1, double davlen = -1.0, double sp_w = -1.0,
-        int deg = -1, double gg = -1.0, int t_z = -1, long long t = -1,
-        long long t_3 = -1, long long t_p = -1) {
-        city_name = name;
+    // конструктор полноценный
+    Weather_Now(
+        const string& name,
+        optional<double> kelvin = nullopt,
+        optional<int> hum = nullopt,
+        optional<double> pascal = nullopt,
+        optional<double> windSpd = nullopt,
+        optional<int> windDeg = nullopt,
+        optional<double> gust = nullopt,
+        optional<int> tzOffset = nullopt,
+        optional<long long> measTime = nullopt,
+        optional<long long> sunset = nullopt,
+        optional<long long> sunrise = nullopt,
+        const string& desc = "Нет данных.") : 
+        cityName(name),
+        temperatureKelvin(kelvin),
+        humidity(hum),
+        pressurePascal(pascal),
+        windSpeed(windSpd),
+        windDegrees(windDeg),
+        windGust(gust),
+        timezoneOffset(tzOffset),
+        measurementTime(measTime),
+        sunsetTime(sunset),
+        sunriseTime(sunrise),
+        description(desc)
+    {
+        if (temperatureKelvin.has_value()) {
+            temperatureCelsius = WeatherUtils::kelvin_To_Celsius(temperatureKelvin.value());
+        }
 
-        temp_kel = t_k;
-        if (temp_kel != -1.0)
-            temp_4el = ubersetzen_kel_4el(temp_kel);
-        else
-            temp_4el = -1.0;
-        vlaga = vlag;
-        dav_pas = davlen;
-        if (dav_pas != -1.0)
-            dav = ubersetzen_pas_mm(davlen);
-        else
-            dav = -1.0;
-
-        speed_wind = sp_w;
-        wind_deg = deg;
-        gust = gg;
-
-        time_zona = t_z;
-        time_3amer = t;
-        time_3akat = t_3;
-        time_pacvet = t_p;
-
-        opic = "Нет данных.";
+        if (pressurePascal.has_value()) {
+            pressureMmHg = WeatherUtils::pascal_To_MmHg(pressurePascal.value());
+        }
     }
 
 
-    // выдать базу
-    // выдать город
-    string get_city_name() const {
-        return city_name;
+
+    // выдать название города
+    string get_cityName() const {
+        return cityName;
     }
 
-    // выдать температура в кельвиназх
-    double get_temp_kel(TO4NOST to4) const {
-        if (temp_kel != -1.0)
-            return format_value(temp_kel, to4);
-        else
-            return -1.0;
+    // выдать температуру в кельвинах
+    optional<double> get_temperatureKelvin(Precision precision = TENTHS) const {
+        if (!temperatureKelvin.has_value()) return nullopt;
+        return WeatherUtils::formatValue(temperatureKelvin.value(), precision);
     }
 
-    // выдать темпераутра в цельсия
-    double get_temp_4el(TO4NOST to4) const {
-        if (temp_4el != -1.0)
-            return format_value(temp_4el, to4);
-        else
-            return -1.0;
+    // выдать температуру в цельсия
+    optional<double> get_temperatureCelsius(Precision precision = TENTHS) const {
+        if (!temperatureCelsius.has_value()) return nullopt;
+        return WeatherUtils::formatValue(temperatureCelsius.value(), precision);
     }
 
     // выдать влажность
-    int get_vlaga() const {
-        if (vlaga != -1.0)
-            return round((double)vlaga);
-        else
-            return -1;
+    optional<int> get_humidity() const {
+        return humidity;
     }
 
     // выдать скорость ветра
-    double get_speed_wind(TO4NOST to4) const {
-        if (speed_wind != -1.0)
-            return format_value(speed_wind, to4);
-        else
-            return -1.0;
+    optional<double> get_windSpeed(Precision precision = TENTHS) const {
+        if (!windSpeed.has_value()) return nullopt;
+        return WeatherUtils::formatValue(windSpeed.value(), precision);
     }
 
     // выдать описание
-    string get_opic() const {
-        return opic;
+    string get_description() const {
+        return description;
     }
 
-    // выдавать направление ветра
-    string get_wind_direction_text() const {
-        if (wind_deg >= 337.5 || wind_deg < 22.5)   return "Северный";
-        if (wind_deg >= 22.5 && wind_deg < 67.5)   return "Северо-восточный";
-        if (wind_deg >= 67.5 && wind_deg < 112.5)  return "Восточный";
-        if (wind_deg >= 112.5 && wind_deg < 157.5)  return "Юго-восточный";
-        if (wind_deg >= 157.5 && wind_deg < 202.5)  return "Южный";
-        if (wind_deg >= 202.5 && wind_deg < 247.5)  return "Юго-западный";
-        if (wind_deg >= 247.5 && wind_deg < 292.5)  return "Западный";
-        if (wind_deg >= 292.5 && wind_deg < 337.5)  return "Северо-западный";
+    // выдать направление ветра (текст)
+    string get_windDirectionText() const {
+        if (!windDegrees.has_value()) return "Неизвестно";
+
+        int deg = windDegrees.value();
+        if (deg >= 337.5 || deg < 22.5)   return "Северный";
+        if (deg >= 22.5 && deg < 67.5)    return "Северо-восточный";
+        if (deg >= 67.5 && deg < 112.5)   return "Восточный";
+        if (deg >= 112.5 && deg < 157.5)  return "Юго-восточный";
+        if (deg >= 157.5 && deg < 202.5)  return "Южный";
+        if (deg >= 202.5 && deg < 247.5)  return "Юго-западный";
+        if (deg >= 247.5 && deg < 292.5)  return "Западный";
+        if (deg >= 292.5 && deg < 337.5)  return "Северо-западный";
         return "Неизвестно";
     }
 
     // выдать давление в паскалях
-    double get_dav_pas(TO4NOST to4) {
-        if (dav_pas != -1.0)
-            return format_value(dav_pas, to4);
-        else
-            return -1.0;
+    optional<double> get_pressurePascal(Precision precision = INTEGER) const {
+        if (!pressurePascal.has_value()) return nullopt;
+        return WeatherUtils::formatValue(pressurePascal.value(), precision);
     }
 
-    // выдать давление
-    double get_dav(TO4NOST to4) {
-        if (dav != -1.0)
-            return format_value(dav, to4);
-        else
-            return -1.0;
+    // выдать давление в мм рт ст
+    optional<double> get_pressureMmHg(Precision precision = TENTHS) const {
+        if (!pressureMmHg.has_value()) return nullopt;
+        return WeatherUtils::formatValue(pressureMmHg.value(), precision);
     }
 
     // выдать порывы ветра
-    double get_gust(TO4NOST to4) {
-        if (gust != -1.0)
-            return format_value(gust, to4);
-        else
-            return -1.0;
+    optional<double> get_windGust(Precision precision = TENTHS) const {
+        if (!windGust.has_value()) return nullopt;
+        return WeatherUtils::formatValue(windGust.value(), precision);
     }
 
-    // выдатль время замера
-    string get_time_3amer() const {
-        if (time_3amer != -1.0)
-            return format_time(time_3amer, time_zona);
-        else
+    // выдать время замера
+    string get_measurementTime() const {
+        if (!measurementTime.has_value() || !timezoneOffset.has_value()) {
             return "Нет данных.";
-    }
-
-    // выдать время рассвета 
-    string get_time_pacvet() const {
-        if (time_pacvet != -1.0)
-            return format_time(time_pacvet, time_zona);
-        else
-            return "Нет данных.";
-    }
-
-    // выдать время заката
-    string get_time_3akat() const {
-        if (time_3akat != -1.0)
-            return format_time(time_3akat, time_zona);
-        else
-            return "Нет данных.";
-    }
-
-    //день ли это
-    bool is_daytime() const {
-        if (time_3amer == -1 || time_pacvet == -1 || time_3akat == -1) {
-            return true;
         }
-
-        return (time_3amer >= time_pacvet && time_3amer <= time_3akat);
+        return WeatherUtils::formatTimestamp(measurementTime.value(), timezoneOffset.value());
     }
+
+    // выдать время рассвета
+    string get_sunriseTime() const {
+        if (!sunriseTime.has_value() || !timezoneOffset.has_value()) {
+            return "Нет данных.";
+        }
+        return WeatherUtils::formatTimestamp(sunriseTime.value(), timezoneOffset.value());
+    }
+    // выдать время заката
+    string get_sunsetTime() const {
+        if (!sunsetTime.has_value() || !timezoneOffset.has_value()) {
+            return "Нет данных.";
+        }
+        return WeatherUtils::formatTimestamp(sunsetTime.value(), timezoneOffset.value());
+    }
+
+    // проверка дня/ночи
+    bool isDaytime() const {
+        if (!measurementTime.has_value() || !sunriseTime.has_value() || !sunsetTime.has_value()) {
+            return true;  // если данных нет, считаем что день
+        }
+        return (measurementTime.value() >= sunriseTime.value() &&
+            measurementTime.value() <= sunsetTime.value());
+    }
+
 };
