@@ -5,6 +5,9 @@
 #include <fstream>
 #include <string>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 std::string loadApiKey() {
     std::ifstream file("api_key.txt");
@@ -89,6 +92,11 @@ void mainMenu(const std::string& apiKey) {
 }
 
 int main() {
+#ifdef _WIN32
+    SetConsoleCP(65001);
+    SetConsoleOutputCP(65001);
+#endif
+    setlocale(LC_ALL, ".UTF-8");
 
     std::cout << "Добро пожаловать в приложение прогноза погоды!\n";
 
@@ -101,4 +109,3 @@ int main() {
     mainMenu(apiKey);
     return 0;
 }
-
