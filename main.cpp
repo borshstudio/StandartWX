@@ -57,7 +57,36 @@ std::string getValidApiKey() {
     }
 }
 
+void mainMenu(const std::string& apiKey) {
+    while (true) {
+        std::cout << "\n=== МЕНЮ ===\n";
+        std::cout << "1) Поиск погоды по городу\n";
+        std::cout << "2) Избранные города\n";
+        std::cout << "3) О приложении\n";
+        std::cout << "0) Выход\n";
+        std::cout << "Ваш выбор: ";
 
+        std::string choice;
+        std::getline(std::cin, choice);
+
+        if (choice == "1") {
+            showWeatherByCity(apiKey);
+        }
+        else if (choice == "2") {
+            favoritesMenu(apiKey);
+        }
+        else if (choice == "3") {
+            aboutApp();
+        }
+        else if (choice == "0") {
+            std::cout << "\nЗавершение программы.\n";
+            break;
+        }
+        else {
+            std::cout << "[ERROR] Неверный пункт меню.\n";
+        }
+    }
+}
 
 int main() {
 
@@ -69,5 +98,7 @@ int main() {
         return 0;
     }
 
+    mainMenu(apiKey);
     return 0;
 }
+
