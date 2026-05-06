@@ -23,7 +23,16 @@ void saveApiKey(const std::string& apiKey) {
 std::string getValidApiKey() {
     std::string apiKey = loadApiKey();
 
-     while (true) {
+    if (!apiKey.empty()) {
+        std::cout << "[INFO] Найден сохраненный API-ключ. Проверяем...\n";
+        if (checkApiKey(apiKey)) {
+            std::cout << "[OK] API-ключ работает.\n";
+            return apiKey;
+        }
+        std::cout << "[ERROR] Сохраненный API-ключ не работает.\n";
+    }
+
+    while (true) {
         std::cout << "\nВведите API-ключ OpenWeatherMap (0 — выход): ";
         std::getline(std::cin, apiKey);
 
