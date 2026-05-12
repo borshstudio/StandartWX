@@ -1,5 +1,6 @@
 ﻿#include "weather.h"
 #include "api.h"
+#include "utils.h"
 
 #include <iostream>
 #include <fstream>
@@ -13,7 +14,7 @@ void showWeatherForCity(const std::string& city, const std::string& apiKey) {
     ApiResult result = requestWeatherFromApi(city, apiKey);
 
     if (!result.success) {
-        std::cout << "[ERROR] " << result.errorMessage << "\n";
+        printError("[ERROR] " + result.errorMessage);
         return;
     }
 
@@ -23,7 +24,7 @@ void showWeatherForCity(const std::string& city, const std::string& apiKey) {
     std::cout << "Сегодня в городе: " << w.city << "\n";
     std::cout << "==============================\n";
     std::cout << "[T] Температура:     " << w.temperature << " °C\n";
-    std::cout << "[~] Ощущается как:  " << w.feelsLike << " °C\n";
+    std::cout << "[~] Ощущается как:   " << w.feelsLike << " °C\n";
     std::cout << "[W] Погода:          " << w.description << "\n";
     std::cout << "[H] Влажность:       " << w.humidity << " %\n";
     std::cout << "[V] Ветер:           " << w.windSpeed << " м/с\n";
@@ -41,7 +42,7 @@ void showWeatherByCity(const std::string& apiKey) {
 
         if (city == "0") return;
         if (city.empty()) {
-            std::cout << "[ERROR] Название города не может быть пустым.\n";
+            printError("[ERROR] Название города не может быть пустым.");
             continue;
         }
 
@@ -49,7 +50,7 @@ void showWeatherByCity(const std::string& apiKey) {
 
         ApiResult result = requestWeatherFromApi(city, apiKey);
         if (!result.success) {
-            std::cout << "[ERROR] " << result.errorMessage << "\n";
+            printError("[ERROR] " + result.errorMessage);
             continue;
         }
 
@@ -111,12 +112,12 @@ void favoritesMenu(const std::string& apiKey) {
             if (!city.empty()) {
                 city = translateCityToEnglish(city);
                 if (isCityInFavorites(city)) {
-                    std::cout << "[!] Этот город уже в избранном.\n";
+                    printWarning("[!] Этот город уже в избранном.");
                 }
                 else {
                     favorites.push_back(city);
                     saveFavorites(favorites);
-                    std::cout << "[OK] Город добавлен.\n";
+                    printOk("[OK] Город добавлен.");
                 }
             }
         }
@@ -132,10 +133,10 @@ void favoritesMenu(const std::string& apiKey) {
             if (idx >= 0 && idx < (int)favorites.size()) {
                 favorites.erase(favorites.begin() + idx);
                 saveFavorites(favorites);
-                std::cout << "[OK] Город удален.\n";
+                printOk("[OK] Город удален.");
             }
             else {
-                std::cout << "[ERROR] Неверный номер.\n";
+                printError("[ERROR] Неверный номер.");
             }
         }
         else if (choice == "4") {
@@ -148,7 +149,7 @@ void favoritesMenu(const std::string& apiKey) {
                 showWeatherForCity(favorites[idx], apiKey);
             }
             else {
-                std::cout << "[ERROR] Неверный номер.\n";
+                printError("[ERROR] Неверный номер.");
             }
         }
         else if (choice == "0") {
