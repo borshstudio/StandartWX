@@ -13,4 +13,6 @@ void saveFavorites(const std::vector<std::string>& favorites);
 void favoritesMenu(const std::string& apiKey);
 void aboutApp();
 
+std::string translateCityToEnglish(const std::string& input);
+
 #endif

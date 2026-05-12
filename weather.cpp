@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-
+#include <unordered_map>
 
 
 void showWeatherForCity(const std::string& city, const std::string& apiKey) {
@@ -44,6 +44,8 @@ void showWeatherByCity(const std::string& apiKey) {
             std::cout << "[ERROR] Название города не может быть пустым.\n";
             continue;
         }
+
+        city = translateCityToEnglish(city);
 
         ApiResult result = requestWeatherFromApi(city, apiKey);
         if (!result.success) {
@@ -93,7 +95,7 @@ void favoritesMenu(const std::string& apiKey) {
         std::string choice;
         std::getline(std::cin, choice);
         auto favorites = loadFavorites();
-        [06.05.2026 15:24] ? ? ? ? s ? ? ? ? ? ? ? ? : if (choice == "1") {
+        if (choice == "1") {
             if (favorites.empty()) {
                 std::cout << "Список пуст.\n";
             }
@@ -107,6 +109,7 @@ void favoritesMenu(const std::string& apiKey) {
             std::cout << "Введите город: ";
             std::getline(std::cin, city);
             if (!city.empty()) {
+                city = translateCityToEnglish(city);
                 favorites.push_back(city);
                 saveFavorites(favorites);
                 std::cout << "[OK] Город добавлен.\n";
@@ -150,4 +153,91 @@ void aboutApp() {
     std::cout << "Консольное приложение прогноза погоды.\n";
     std::cout << "Используется сервис OpenWeatherMap.\n\n";
     std::cout << "Авторы приложения:\n - Левашов Дмитрий\n - Новиков Юрий \n - Грачев Александр\n\n";
+}
+
+
+
+std::string translateCityToEnglish(const std::string& input) {
+    bool hasCyrillic = false;
+    for (char c : input) {
+        if ((c >= 'А' && c <= 'я') || c == 'Ё' || c == 'ё') {
+            hasCyrillic = true;
+            break;
+        }
+    }
+    if (!hasCyrillic) return input;
+
+    static const std::unordered_map<std::string, std::string> cityDict = {
+        {"Москва", "Moscow"},
+        {"Санкт-Петербург", "Saint Petersburg"},
+        {"Санкт Петербург", "Saint Petersburg"},
+        {"Питер", "Saint Petersburg"},
+        {"Новосибирск", "Novosibirsk"},
+        {"Екатеринбург", "Yekaterinburg"},
+        {"Нижний Новгород", "Nizhny Novgorod"},
+        {"Казань", "Kazan"},
+        {"Челябинск", "Chelyabinsk"},
+        {"Омск", "Omsk"},
+        {"Самара", "Samara"},
+        {"Уфа", "Ufa"},
+        {"Красноярск", "Krasnoyarsk"},
+        {"Пермь", "Perm"},
+        {"Воронеж", "Voronezh"},
+        {"Волгоград", "Volgograd"},
+        {"Краснодар", "Krasnodar"},
+        {"Саратов", "Saratov"},
+        {"Тюмень", "Tyumen"},
+        {"Ижевск", "Izhevsk"},
+        {"Барнаул", "Barnaul"},
+        {"Иркутск", "Irkutsk"},
+        {"Хабаровск", "Khabarovsk"},
+        {"Ярославль", "Yaroslavl"},
+        {"Владивосток", "Vladivostok"},
+        {"Томск", "Tomsk"},
+        {"Кемерово", "Kemerovo"},
+        {"Рязань", "Ryazan"},
+        {"Астрахань", "Astrakhan"},
+        {"Пенза", "Penza"},
+        {"Киров", "Kirov"},
+        {"Калининград", "Kaliningrad"},
+        {"Тула", "Tula"},
+        {"Тверь", "Tver"},
+        {"Сочи", "Sochi"},
+        {"Мурманск", "Murmansk"},
+        {"Париж", "Paris"},
+        {"Лондон", "London"},
+        {"Рим", "Rome"},
+        {"Берлин", "Berlin"},
+        {"Мадрид", "Madrid"},
+        {"Пекин", "Beijing"},
+        {"Токио", "Tokyo"},
+        {"Минск", "Minsk"},
+        {"Киев", "Kyiv"},
+        {"Астана", "Astana"}
+    };
+
+    auto it = cityDict.find(input);
+    if (it != cityDict.end()) 
+        return it->second;
+
+    static const std::unordered_map<char, std::string> translit = {
+        {'А',"A"},{'а',"a"},{'Б',"B"},{'б',"b"},{'В',"V"},{'в',"v"},
+        {'Г',"G"},{'г',"g"},{'Д',"D"},{'д',"d"},{'Е',"E"},{'е',"e"},
+        {'Ё',"Yo"},{'ё',"yo"},{'Ж',"Zh"},{'ж',"zh"},{'З',"Z"},{'з',"z"},
+        {'И',"I"},{'и',"i"},{'Й',"Y"},{'й',"y"},{'К',"K"},{'к',"k"},
+        {'Л',"L"},{'л',"l"},{'М',"M"},{'м',"m"},{'Н',"N"},{'н',"n"},
+        {'О',"O"},{'о',"o"},{'П',"P"},{'п',"p"},{'Р',"R"},{'р',"r"},
+        {'С',"S"},{'с',"s"},{'Т',"T"},{'т',"t"},{'У',"U"},{'у',"u"},
+        {'Ф',"F"},{'ф',"f"},{'Х',"Kh"},{'х',"kh"},{'Ц',"Ts"},{'ц',"ts"},
+        {'Ч',"Ch"},{'ч',"ch"},{'Ш',"Sh"},{'ш',"sh"},{'Щ',"Shch"},{'щ',"shch"},
+        {'Ъ',""},{'ъ',""},{'Ы',"Y"},{'ы',"y"},{'Ь',""},{'ь',""},
+        {'Э',"E"},{'э',"e"},{'Ю',"Yu"},{'ю',"yu"},{'Я',"Ya"},{'я',"ya"}
+    };
+
+    std::string result;
+    for (char c : input) {
+        auto t = translit.find(c);
+        result += (t != translit.end()) ? t->second : std::string(1, c);
+    }
+    return result;
 }
