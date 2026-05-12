@@ -110,9 +110,14 @@ void favoritesMenu(const std::string& apiKey) {
             std::getline(std::cin, city);
             if (!city.empty()) {
                 city = translateCityToEnglish(city);
-                favorites.push_back(city);
-                saveFavorites(favorites);
-                std::cout << "[OK] Город добавлен.\n";
+                if (isCityInFavorites(city)) {
+                    std::cout << "[!] Этот город уже в избранном.\n";
+                }
+                else {
+                    favorites.push_back(city);
+                    saveFavorites(favorites);
+                    std::cout << "[OK] Город добавлен.\n";
+                }
             }
         }
         else if (choice == "3") {
@@ -240,4 +245,15 @@ std::string translateCityToEnglish(const std::string& input) {
         result += (t != translit.end()) ? t->second : std::string(1, c);
     }
     return result;
+}
+
+
+
+bool isCityInFavorites(const std::string& city) {
+    auto favorites = loadFavorites();
+    for (const auto& fav : favorites) {
+        if (fav == city) 
+            return true;
+    }
+    return false;
 }

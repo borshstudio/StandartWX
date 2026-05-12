@@ -14,5 +14,6 @@ void favoritesMenu(const std::string& apiKey);
 void aboutApp();
 
 std::string translateCityToEnglish(const std::string& input);
+bool isCityInFavorites(const std::string& city);
 
 #endif
