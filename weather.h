@@ -15,5 +15,6 @@ void aboutApp();
 
 std::string translateCityToEnglish(const std::string& input);
 bool isCityInFavorites(const std::string& city);
+int safeStoi(const std::string& str, int fallback = -1);
 
 #endif

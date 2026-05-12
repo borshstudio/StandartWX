@@ -128,11 +128,14 @@ void favoritesMenu(const std::string& apiKey) {
             std::cout << "Введите номер: ";
             std::string n;
             std::getline(std::cin, n);
-            int idx = std::stoi(n) - 1;
-            if (idx >= 0 && idx < favorites.size()) {
+            int idx = safeStoi(n) - 1;
+            if (idx >= 0 && idx < (int)favorites.size()) {
                 favorites.erase(favorites.begin() + idx);
                 saveFavorites(favorites);
                 std::cout << "[OK] Город удален.\n";
+            }
+            else {
+                std::cout << "[ERROR] Неверный номер.\n";
             }
         }
         else if (choice == "4") {
@@ -140,9 +143,12 @@ void favoritesMenu(const std::string& apiKey) {
             std::cout << "Введите номер: ";
             std::string n;
             std::getline(std::cin, n);
-            int idx = std::stoi(n) - 1;
-            if (idx >= 0 && idx < favorites.size()) {
+            int idx = safeStoi(n) - 1;
+            if (idx >= 0 && idx < (int)favorites.size()) {
                 showWeatherForCity(favorites[idx], apiKey);
+            }
+            else {
+                std::cout << "[ERROR] Неверный номер.\n";
             }
         }
         else if (choice == "0") {
@@ -256,4 +262,15 @@ bool isCityInFavorites(const std::string& city) {
             return true;
     }
     return false;
+}
+
+
+
+int safeStoi(const std::string& str, int fallback = -1) {
+    try {
+        return std::stoi(str);
+    }
+    catch (...) {
+        return fallback;
+    }
 }
