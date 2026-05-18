@@ -1,61 +1,111 @@
-#include <iostream>
-#include <string>
-#include <locale>
-#include <codecvt>
+#include "api.h"
+#include "weather.h"
 
-// Заглушки для функций прогноза погоды
-std::string getCurrentWeather() {
-    return "Текущая погода: Солнечно, +20°C";
+#include <iostream>
+#include <fstream>
+#include <string>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+std::string loadApiKey() {
+    std::ifstream file("api_key.txt");
+    std::string apiKey;
+    if (file.is_open()) {
+        std::getline(file, apiKey);
+    }
+    return apiKey;
 }
 
-std::string getForecastWeather() {
-    return "Прогноз на 3 дня:\nДень 1: Облачно, +18°C\nДень 2: Дождь, +15°C\nДень 3: Ясно, +22°C";
+void saveApiKey(const std::string& apiKey) {
+    std::ofstream file("api_key.txt");
+    file << apiKey;
+}
+
+std::string getValidApiKey() {
+    std::string apiKey = loadApiKey();
+
+    if (!apiKey.empty()) {
+        std::cout << "[INFO] Найден сохраненный API-ключ. Проверяем...\n";
+        if (checkApiKey(apiKey)) {
+            std::cout << "[OK] API-ключ работает.\n";
+            return apiKey;
+        }
+        std::cout << "[ERROR] Сохраненный API-ключ не работает.\n";
+    }
+
+    while (true) {
+        std::cout << "\nВведите API-ключ OpenWeatherMap (0 — выход): ";
+        std::getline(std::cin, apiKey);
+
+        if (apiKey == "0") {
+            return "";
+        }
+
+        if (apiKey.empty()) {
+            std::cout << "[ERROR] API-ключ не может быть пустым.\n";
+            continue;
+        }
+
+        std::cout << "[INFO] Проверяем API-ключ...\n";
+
+        if (checkApiKey(apiKey)) {
+            saveApiKey(apiKey);
+            std::cout << "[OK] API-ключ сохранен.\n";
+            return apiKey;
+        }
+
+        std::cout << "[ERROR] API-ключ неправильный.\n";
+    }
+}
+
+void mainMenu(const std::string& apiKey) {
+    while (true) {
+        std::cout << "\n=== МЕНЮ ===\n";
+        std::cout << "1) Поиск погоды по городу\n";
+        std::cout << "2) Избранные города\n";
+        std::cout << "3) О приложении\n";
+        std::cout << "0) Выход\n";
+        std::cout << "Ваш выбор: ";
+
+        std::string choice;
+        std::getline(std::cin, choice);
+
+        if (choice == "1") {
+            showWeatherByCity(apiKey);
+        }
+        else if (choice == "2") {
+            favoritesMenu(apiKey);
+        }
+        else if (choice == "3") {
+            aboutApp();
+        }
+        else if (choice == "0") {
+            std::cout << "\nЗавершение программы.\n";
+            break;
+        }
+        else {
+            std::cout << "[ERROR] Неверный пункт меню.\n";
+        }
+    }
 }
 
 int main() {
-    int choice;
-    
-    // Для Windows: устанавливаем широкие символы для консоли
-    // _setmode(_fileno(stdout), _O_U16TEXT);
-    // _setmode(_fileno(stdin), _O_U16TEXT);
-    
-    // Устанавливаем локаль для поддержки кириллицы
-    std::locale::global(std::locale(""));
-    std::cout.imbue(std::locale());
-    
-    std::cout << "=== СтандартWX - Прогноз погоды ===" << std::endl;
-    
-    do {
-        
-        std::cout << "\nВыберите опцию:" << std::endl;
-        std::cout << "1. Текущая погода" << std::endl;
-        std::cout << "2. Прогноз погоды на 3 дня" << std::endl;
-        std::cout << "3. Выход" << std::endl;
-        std::cout << "Ваш выбор: ";
-        
-        if (!(std::cin >> choice)) {
-            std::cout << "\nОшибка ввода. Пожалуйста, введите число." << std::endl;
-            std::cin.clear();
-            std::cin.ignore(10000, '\n');
-            choice = 0;
-        }
-        
-        switch(choice) {
-            case 1:
-                std::cout << "\n" << getCurrentWeather() << std::endl;
-                break;
-            case 2:
-                std::cout << "\n" << getForecastWeather() << std::endl;
-                break;
-            case 3:
-                std::cout << "\nДо свидания!" << std::endl;
-                break;
-            default:
-                std::cout << "\nНеверный выбор. Попробуйте снова." << std::endl;
-                break;
-        }
-        
-    } while(choice != 3);
-    
+#ifdef _WIN32
+    SetConsoleCP(65001);
+    SetConsoleOutputCP(65001);
+#endif
+    setlocale(LC_ALL, ".UTF-8");
+
+    std::cout << "Добро пожаловать в приложение прогноза погоды!\n";
+
+    std::string apiKey = getValidApiKey();
+    if (apiKey.empty()) {
+        std::cout << "Выход из приложения.\n";
+        return 0;
+    }
+
+    mainMenu(apiKey);
     return 0;
 }
