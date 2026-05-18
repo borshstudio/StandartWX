@@ -1,16 +1,28 @@
-#ifndef WEATHER_H
-#define WEATHER_H
+#ifndef API_H
+#define API_H
 
 #include <string>
-#include <vector>
 
-void showWeatherByCity(const std::string& apiKey);
-void showWeatherForCity(const std::string& city, const std::string& apiKey);
+// структура погоды
+struct WeatherInfo {
+    std::string city;
+    double temperature;
+    double feelsLike;
+    int humidity;
+    int pressure;
+    double windSpeed;
+    std::string description;
+};
 
-std::vector<std::string> loadFavorites();
-void saveFavorites(const std::vector<std::string>& favorites);
+struct ApiResult {
+    bool success;
+    int statusCode;
+    std::string errorMessage;
+    WeatherInfo weather;
+};
 
-void favoritesMenu(const std::string& apiKey);
-void aboutApp();
+// ф/и для работы с API
+ApiResult requestWeatherFromApi(const std::string& city, const std::string& apiKey);
+bool checkApiKey(const std::string& apiKey);
 
 #endif
