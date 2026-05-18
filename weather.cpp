@@ -267,7 +267,7 @@ bool isCityInFavorites(const std::string& city) {
 
 
 
-int safeStoi(const std::string& str, int fallback = -1) {
+int safeStoi(const std::string& str, int fallback) {
     try {
         return std::stoi(str);
     }
