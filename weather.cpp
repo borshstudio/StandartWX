@@ -8,6 +8,13 @@
 #include <string>
 #include <algorithm>
 #include <unordered_map>
+#include <cstdint>
+// #include <codecvt>
+// #include <locale>
+#include <windows.h>
+
+
+extern std::string readUtf8Line();
 
 
 void showWeatherForCity(const std::string& city, const std::string& apiKey) {
@@ -38,7 +45,7 @@ void showWeatherByCity(const std::string& apiKey) {
     while (true) {
         std::string city;
         std::cout << "\nВведите название города (латиницей, 0 — назад): ";
-        std::getline(std::cin, city);
+        city = readUtf8Line();
 
         if (city == "0") return;
         if (city.empty()) {
@@ -46,7 +53,9 @@ void showWeatherByCity(const std::string& apiKey) {
             continue;
         }
 
+//        std::cout << "[DEBUG] До транслитерации: [" << city << "]" << std::endl;
         city = translateCityToEnglish(city);
+//        std::cout << "[DEBUG] Город после транслитерации: [" << city << "]" << std::endl;
 
         ApiResult result = requestWeatherFromApi(city, apiKey);
         if (!result.success) {
@@ -94,7 +103,7 @@ void favoritesMenu(const std::string& apiKey) {
         std::cout << "Ваш выбор: ";
 
         std::string choice;
-        std::getline(std::cin, choice);
+        choice = readUtf8Line();
         auto favorites = loadFavorites();
         if (choice == "1") {
             if (favorites.empty()) {
@@ -108,7 +117,7 @@ void favoritesMenu(const std::string& apiKey) {
         else if (choice == "2") {
             std::string city;
             std::cout << "Введите город: ";
-            std::getline(std::cin, city);
+            city = readUtf8Line();
             if (!city.empty()) {
                 city = translateCityToEnglish(city);
                 if (isCityInFavorites(city)) {
@@ -128,7 +137,7 @@ void favoritesMenu(const std::string& apiKey) {
             }
             std::cout << "Введите номер: ";
             std::string n;
-            std::getline(std::cin, n);
+            n = readUtf8Line();
             int idx = safeStoi(n) - 1;
             if (idx >= 0 && idx < (int)favorites.size()) {
                 favorites.erase(favorites.begin() + idx);
@@ -143,7 +152,7 @@ void favoritesMenu(const std::string& apiKey) {
             if (favorites.empty()) continue;
             std::cout << "Введите номер: ";
             std::string n;
-            std::getline(std::cin, n);
+            n = readUtf8Line();
             int idx = safeStoi(n) - 1;
             if (idx >= 0 && idx < (int)favorites.size()) {
                 showWeatherForCity(favorites[idx], apiKey);
@@ -169,15 +178,44 @@ void aboutApp() {
 
 
 
-std::string translateCityToEnglish(const std::string& input) {
-    bool hasCyrillic = false;
-    for (char c : input) {
-        if ((c >= 'А' && c <= 'я') || c == 'Ё' || c == 'ё') {
-            hasCyrillic = true;
-            break;
-        }
+uint32_t decodeUtf8(const std::string& s, size_t& i) {
+    if (i >= s.size()) return 0;
+    unsigned char c = static_cast<unsigned char>(s[i]);
+    uint32_t cp = 0;
+    size_t len = 0;
+    if ((c & 0x80) == 0) {
+        cp = c;
+        len = 1;
     }
-    if (!hasCyrillic) return input;
+    else if ((c & 0xE0) == 0xC0) {
+        if (i + 1 >= s.size()) return 0;
+        cp = (c & 0x1F) << 6;
+        cp |= (static_cast<unsigned char>(s[i + 1]) & 0x3F);
+        len = 2;
+    }
+    else if ((c & 0xF0) == 0xE0) {
+        if (i + 2 >= s.size()) return 0;
+        cp = (c & 0x0F) << 12;
+        cp |= (static_cast<unsigned char>(s[i + 1]) & 0x3F) << 6;
+        cp |= (static_cast<unsigned char>(s[i + 2]) & 0x3F);
+        len = 3;
+    }
+    else if ((c & 0xF8) == 0xF0) {
+        if (i + 3 >= s.size()) return 0;
+        cp = (c & 0x07) << 18;
+        cp |= (static_cast<unsigned char>(s[i + 1]) & 0x3F) << 12;
+        cp |= (static_cast<unsigned char>(s[i + 2]) & 0x3F) << 6;
+        cp |= (static_cast<unsigned char>(s[i + 3]) & 0x3F);
+        len = 4;
+    }
+    else {
+        return 0; // некорректный символ
+    }
+    i += len;
+    return cp;
+}
+
+std::string translateCityToEnglish(const std::string& input) {
 
     static const std::unordered_map<std::string, std::string> cityDict = {
         {"Москва", "Moscow"},
@@ -228,28 +266,76 @@ std::string translateCityToEnglish(const std::string& input) {
         {"Астана", "Astana"}
     };
 
-    auto it = cityDict.find(input);
-    if (it != cityDict.end()) 
-        return it->second;
-
-    static const std::unordered_map<char, std::string> translit = {
-        {'А',"A"},{'а',"a"},{'Б',"B"},{'б',"b"},{'В',"V"},{'в',"v"},
-        {'Г',"G"},{'г',"g"},{'Д',"D"},{'д',"d"},{'Е',"E"},{'е',"e"},
-        {'Ё',"Yo"},{'ё',"yo"},{'Ж',"Zh"},{'ж',"zh"},{'З',"Z"},{'з',"z"},
-        {'И',"I"},{'и',"i"},{'Й',"Y"},{'й',"y"},{'К',"K"},{'к',"k"},
-        {'Л',"L"},{'л',"l"},{'М',"M"},{'м',"m"},{'Н',"N"},{'н',"n"},
-        {'О',"O"},{'о',"o"},{'П',"P"},{'п',"p"},{'Р',"R"},{'р',"r"},
-        {'С',"S"},{'с',"s"},{'Т',"T"},{'т',"t"},{'У',"U"},{'у',"u"},
-        {'Ф',"F"},{'ф',"f"},{'Х',"Kh"},{'х',"kh"},{'Ц',"Ts"},{'ц',"ts"},
-        {'Ч',"Ch"},{'ч',"ch"},{'Ш',"Sh"},{'ш',"sh"},{'Щ',"Shch"},{'щ',"shch"},
-        {'Ъ',""},{'ъ',""},{'Ы',"Y"},{'ы',"y"},{'Ь',""},{'ь',""},
-        {'Э',"E"},{'э',"e"},{'Ю',"Yu"},{'ю',"yu"},{'Я',"Ya"},{'я',"ya"}
+    static const std::unordered_map<uint32_t, std::string> translit = {
+        {0x0410,"A"}, {0x0430,"a"},
+        {0x0411,"B"}, {0x0431,"b"},
+        {0x0412,"V"}, {0x0432,"v"},
+        {0x0413,"G"}, {0x0433,"g"},
+        {0x0414,"D"}, {0x0434,"d"},
+        {0x0415,"E"}, {0x0435,"e"},
+        {0x0401,"Yo"},{0x0451,"yo"},
+        {0x0416,"Zh"},{0x0436,"zh"},
+        {0x0417,"Z"}, {0x0437,"z"},  
+        {0x0418,"I"}, {0x0438,"i"}, 
+        {0x0419,"Y"}, {0x0439,"y"},
+        {0x041A,"K"}, {0x043A,"k"},
+        {0x041B,"L"}, {0x043B,"l"},   
+        {0x041C,"M"}, {0x043C,"m"},  
+        {0x041D,"N"}, {0x043D,"n"},
+        {0x041E,"O"}, {0x043E,"o"}, 
+        {0x041F,"P"}, {0x043F,"p"},
+        {0x0420,"R"}, {0x0440,"r"}, 
+        {0x0421,"S"}, {0x0441,"s"},
+        {0x0422,"T"}, {0x0442,"t"},
+        {0x0423,"U"}, {0x0443,"u"}, 
+        {0x0424,"F"}, {0x0444,"f"}, 
+        {0x0425,"Kh"},{0x0445,"kh"}, 
+        {0x0426,"Ts"},{0x0446,"ts"},
+        {0x0427,"Ch"},{0x0447,"ch"},
+        {0x0428,"Sh"},{0x0448,"sh"},
+        {0x0429,"Shch"},{0x0449,"shch"}, 
+        {0x042A,""},  {0x044A,""},
+        {0x042B,"Y"}, {0x044B,"y"}, 
+        {0x042C,""},  {0x044C,""},   
+        {0x042D,"E"}, {0x044D,"e"}, 
+        {0x042E,"Yu"},{0x044E,"yu"}, 
+        {0x042F,"Ya"},{0x044F,"ya"}   
     };
 
+    auto cityIt = cityDict.find(input);
+    if (cityIt != cityDict.end()) {
+        return cityIt->second;
+    }
+
+    bool hasCyrillic = false;
+    size_t pos = 0;
+    while (pos < input.size()) {
+        size_t oldPos = pos;
+        uint32_t cp = decodeUtf8(input, pos);
+        if (cp >= 0x0400 && cp <= 0x04FF) {
+            hasCyrillic = true;
+            break;
+        }
+    }
+    if (!hasCyrillic) return input; // нет кириллицы — возврат
+
     std::string result;
-    for (char c : input) {
-        auto t = translit.find(c);
-        result += (t != translit.end()) ? t->second : std::string(1, c);
+    pos = 0;
+    while (pos < input.size()) {
+        size_t oldPos = pos;
+        uint32_t cp = decodeUtf8(input, pos);
+        if (cp == 0) {
+            result += input[oldPos];    // ошибка декодирования — добавляем байт
+            pos = oldPos + 1;
+            continue;
+        }
+        auto t = translit.find(cp);
+        if (t != translit.end()) {
+            result += t->second;
+        }
+        else {
+            result += input.substr(oldPos, pos - oldPos);
+        }
     }
     return result;
 }
