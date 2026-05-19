@@ -9,8 +9,6 @@
 #include <algorithm>
 #include <unordered_map>
 #include <cstdint>
-// #include <codecvt>
-// #include <locale>
 #include <windows.h>
 
 
@@ -44,7 +42,7 @@ void showWeatherForCity(const std::string& city, const std::string& apiKey) {
 void showWeatherByCity(const std::string& apiKey) {
     while (true) {
         std::string city;
-        std::cout << "\nВведите название города (латиницей, 0 — назад): ";
+        std::cout << "\nВведите название города (0 — назад): ";
         city = readUtf8Line();
 
         if (city == "0") return;
@@ -53,9 +51,7 @@ void showWeatherByCity(const std::string& apiKey) {
             continue;
         }
 
-//        std::cout << "[DEBUG] До транслитерации: [" << city << "]" << std::endl;
         city = translateCityToEnglish(city);
-//        std::cout << "[DEBUG] Город после транслитерации: [" << city << "]" << std::endl;
 
         ApiResult result = requestWeatherFromApi(city, apiKey);
         if (!result.success) {
@@ -173,7 +169,7 @@ void aboutApp() {
     std::cout << "\nО приложении:\n";
     std::cout << "Консольное приложение прогноза погоды.\n";
     std::cout << "Используется сервис OpenWeatherMap.\n\n";
-    std::cout << "Авторы приложения:\n - Левашов Дмитрий\n - Новиков Юрий \n - Грачев Александр\n\n";
+    std::cout << "Авторы приложения:\n - Левашов Дмитрий\n - Новиков Юрий \n - Грачев Александр \n - Гаврилов Роман\n\n";
 }
 
 
@@ -209,7 +205,7 @@ uint32_t decodeUtf8(const std::string& s, size_t& i) {
         len = 4;
     }
     else {
-        return 0; // некорректный символ
+        return 0;
     }
     i += len;
     return cp;
@@ -317,7 +313,7 @@ std::string translateCityToEnglish(const std::string& input) {
             break;
         }
     }
-    if (!hasCyrillic) return input; // нет кириллицы — возврат
+    if (!hasCyrillic) return input;
 
     std::string result;
     pos = 0;
@@ -325,7 +321,7 @@ std::string translateCityToEnglish(const std::string& input) {
         size_t oldPos = pos;
         uint32_t cp = decodeUtf8(input, pos);
         if (cp == 0) {
-            result += input[oldPos];    // ошибка декодирования — добавляем байт
+            result += input[oldPos];
             pos = oldPos + 1;
             continue;
         }
