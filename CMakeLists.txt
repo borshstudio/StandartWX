@@ -31,6 +31,8 @@ add_executable(WeatherApp
         api.h
         weather.cpp
         weather.h
+        utils.cpp
+        utils.h
 )
 
 target_link_libraries(WeatherApp PRIVATE
